@@ -816,6 +816,7 @@ def depthRange(loc_depth, sdr, ddr, seismo_thick, elist, slabname, these_paramet
     elist = elist[elist.depth >= sdepth]
 
     elist = pd.concat([elist,dontremove])
+    
     return elist, sdepth, ddepth, True
 
 def getangle(a1, b1, c1, a2, b2, c2):
@@ -1064,7 +1065,7 @@ def dualdepthperp(loc_depth, sdr, ddr, seismo_thick, elist, slabname, cstr, lon,
         plt.close()
     '''
     elist2 = elist2[['lat', 'lon', 'depth', 'unc', 'etype', 'ID', 'mag', 'time', 'S1', 'D1', 'R1', 'S2', 'D2', 'R2', 'src', 'distance']]
-    return elist2, sdepth, ddepth, True
+    return elist2, rs, rd, True
 
 ###############################################
 
@@ -2234,6 +2235,7 @@ def getextraRF(trimmed, slab, cstr, mindist, trenchlon, trenchlat, AARF, maxID, 
 
 def allFilters(eventlist, lat, lon, inside, slab1, strtmp, diptmp, seismo_thick, alen, blen, clen, mdist, sdr, ddr, mindip, maxID, out, AA_data, TR_data, slab, maxdist, testprint, extended, datainfo, nodeinfo, nID):
 
+    uprad, dorad = 0, 0
     # Removing average active source gathered from other nodes
     eventlist = eventlist[eventlist.etype != 'AA'] # Separate out bathymetry data
     depthwritten, perpwritten, cutoffwritten = True, True, True
@@ -2335,7 +2337,7 @@ def allFilters(eventlist, lat, lon, inside, slab1, strtmp, diptmp, seismo_thick,
 
     if slab == 'him' and mindist > 175:# and len(elistRF0) < 100:
         test = False
-        return elistPD[elistPD.etype == 'XX'], test, np.nan, np.nan, strtmp, diptmp, maxID, np.nan
+        return elistPD[elistPD.etype == 'XX'], test, uprad, dorad, strtmp, diptmp, maxID, slab1
 
     if testprint:
         idlistRF = list(elistRF0['ID'].values)
@@ -2422,7 +2424,7 @@ def allFilters(eventlist, lat, lon, inside, slab1, strtmp, diptmp, seismo_thick,
             f.write('-%i- exited first nodataneedAA, len(trimmed), %i \n'%(nID,len(trimmed)))
             f.close()
             
-        return trimmed, test, sdepth, ddepth, cstr, cdip, maxID, loc_depth
+        return trimmed, test, uprad, dorad, cstr, cdip, maxID, loc_depth
 
     loc_depth, elist = findLocDep(slab1, tooFar, elistPD, seismo_thick, testprint, balist, out, slab, lon, lat)
     
@@ -2450,7 +2452,7 @@ def allFilters(eventlist, lat, lon, inside, slab1, strtmp, diptmp, seismo_thick,
             f.write('-%i- exited second nodataneedAA, len(trimmed), %i \n'%(nID,len(trimmed)))
             f.close()
           
-        return trimmed, test, sdepth, ddepth, cstr, cdip, maxID, loc_depth
+        return trimmed, test, uprad, dorad, cstr, cdip, maxID, loc_depth
 
     elistBA1 = elist[elist.etype == 'BA'] # Separate out bathymetry data
     elistAS1 = elist[elist.etype == 'AS'] # Separate out active source data
@@ -2490,7 +2492,7 @@ def allFilters(eventlist, lat, lon, inside, slab1, strtmp, diptmp, seismo_thick,
         f.close()
             
     if len(elist)>1 and (cdip > mindip or (len(elistBA)<1 and extended)):
-        trimmed1, sdepth, ddepth, cutoffwritten = dualdepthperp(loc_depth, sdr, ddr, seismo_thick, elist, slab, cstr, lon, lat, cdip, alen, blen, these_parameters, cutoffwritten)
+        trimmed1, uprad, dorad, cutoffwritten = dualdepthperp(loc_depth, sdr, ddr, seismo_thick, elist, slab, cstr, lon, lat, cdip, alen, blen, these_parameters, cutoffwritten)
         
         if testprint:
             idlist = list(trimmed1['ID'].values)
@@ -2499,8 +2501,10 @@ def allFilters(eventlist, lat, lon, inside, slab1, strtmp, diptmp, seismo_thick,
         
         to_trimmed1 = trimmed1[trimmed1.etype == 'TO']
         if len(to_trimmed1)>0:
-            if slab == 'sum' or slab == 'manz' or slab == 'sam':
+            if slab == 'sum' or slab == 'manz':
                 to_trimmed, tosdepth, toddepth, ctwrt = dualdepthperp(loc_depth, sdr, ddr, seismo_thick, to_trimmed1, slab, cstr, lon, lat, cdip, alen, blen, these_parameters, cutoffwritten)
+            elif slab == 'sam' and lat > -15 and lat < -11:
+                to_trimmed, tosdepth, toddepth, ctwrt = dualdepthperp(loc_depth, sdr, ddr, seismo_thick, to_trimmed1, slab, cstr, lon, lat, cdip, 100, blen, these_parameters, cutoffwritten)
             else:
                 to_trimmed, tosdepth, toddepth, ctwrt = dualdepthperp(loc_depth, sdr, ddr, seismo_thick, to_trimmed1, slab, cstr, lon, lat, cdip, blen, blen, these_parameters, cutoffwritten)
             trimmed1 = pd.concat([trimmed1[trimmed1.etype != 'TO'], to_trimmed])
@@ -2551,6 +2555,9 @@ def allFilters(eventlist, lat, lon, inside, slab1, strtmp, diptmp, seismo_thick,
         elist = elist[elist.etype != 'RF']
         elist = elist[elist.etype != 'CP']
         elist2, sdepth, ddepth, depthwritten = depthRange(loc_depth, sdr, ddr, seismo_thick, elist, slab, these_parameters, depthwritten)
+        
+        uprad = loc_depth-sdepth
+        dorad = ddepth-loc_depth
         #print 'testing depthRange lon,lat,sdepth,ddepth,loc_depth,alen,blen,sdr,ddr',lon,lat,sdepth,ddepth,loc_depth,alen,blen,sdr,ddr
         if testprint:
             idlist = list(elist2['ID'].values)
@@ -2575,10 +2582,13 @@ def allFilters(eventlist, lat, lon, inside, slab1, strtmp, diptmp, seismo_thick,
     elif len(elistBA)>0 or len(elistAS)>0 or len(elistRF)>0 or len(elistCP)>0:
         #print 'only RF',lon,lat
         trimmed = pd.concat([elistAS, elistBA, elistRF, elistCP])
-        sdepth, ddepth = loc_depth-20, loc_depth+20
+        sdepth, ddepth = loc_depth-sdr, loc_depth+sdr
+        uprad = sdr
+        dorad = sdr
     else:
-        sdepth, ddepth = loc_depth-20, loc_depth+20
-
+        sdepth, ddepth = loc_depth-sdr, loc_depth+sdr
+        uprad = sdr
+        dorad = sdr
         if (mindist <= distAA and not out and len(aslist)<1) or ((trenchlon>258.7 and trenchlon<260.7 and trenchlat>16.0 and trenchlat<16.85)):
             trimmed, test, sdepth, ddepth, cstr, maxID, loc_depth, depthwritten, perpwritten = noDataNeedAA(elist, cstr, minang, AA_data, lat, lon, maxID, TR_data, mindist, testprint, sdr, ddr, seismo_thick, slab, these_parameters, depthwritten, perpwritten, trenchlon, trenchlat, AARF, loc_depth)
             
@@ -2590,11 +2600,11 @@ def allFilters(eventlist, lat, lon, inside, slab1, strtmp, diptmp, seismo_thick,
                 f.write('-%i- exited third nodataneedAA, len(trimmed), %i \n'%(nID,len(trimmed)))
                 f.close()
             
-            return trimmed, test, sdepth, ddepth, cstr, cdip, maxID, loc_depth
+            return trimmed, test, uprad, dorad, cstr, cdip, maxID, loc_depth
 
         else:  # Skip nodes with no data
             test = False
-            return elist, test, np.nan, np.nan, cstr, cdip, maxID, np.nan
+            return elist, test, uprad, dorad, cstr, cdip, maxID, loc_depth
 
     elistRF0, elistRF = removematches(elistRF0,elistRF)
     if len(elistRF0)>0:
@@ -2619,7 +2629,7 @@ def allFilters(eventlist, lat, lon, inside, slab1, strtmp, diptmp, seismo_thick,
 
     if len(trimmed) < 2 and mindist > distAA and len(elistRF)<1 and len(elistCP)<1 and ((slab != 'ryu' and slab != 'hel') or len(trimmed[trimmed.etype == 'TO'])<1):  # Skip nodes with no data
         test = False
-        return trimmed, test, np.nan, np.nan, cstr, cdip, maxID, np.nan
+        return trimmed, test, uprad, dorad, cstr, cdip, maxID, loc_depth
     elif (len(trimmed) < 2 and mindist <= distAA and not out and len(aslist)<1) or (len(trimmed)<2 and (trenchlon>258.7 and trenchlon<260.7 and trenchlat>16.0 and trenchlat<16.85) and len(elistRF)<1):
         trimmed2, test, sdepth, ddepth, cstr, maxID, loc_depth, depthwritten, perpwritten = noDataNeedAA(trimmed, cstr, minang, AA_data, lat, lon, maxID, TR_data, mindist, testprint, sdr, ddr, seismo_thick, slab, these_parameters, depthwritten, perpwritten, trenchlon, trenchlat, AARF, loc_depth)
         
@@ -2631,7 +2641,7 @@ def allFilters(eventlist, lat, lon, inside, slab1, strtmp, diptmp, seismo_thick,
             f.write('-%i- exited fourth nodataneedAA, len(trimmed), %i \n'%(nID,len(trimmed2)))
             f.close()
                 
-        return trimmed2, test, sdepth, ddepth, cstr, cdip, maxID, loc_depth
+        return trimmed2, test, uprad, dorad, cstr, cdip, maxID, loc_depth
 
     if mindist <= distAA and not out and len(aslist)<1: # GLM 11.21.16
         if testprint:
@@ -2684,7 +2694,7 @@ def allFilters(eventlist, lat, lon, inside, slab1, strtmp, diptmp, seismo_thick,
 
     if len(trimmed) < 1:
         test = False
-        return trimmed, test, sdepth, ddepth, cstr, cdip, maxID, loc_depth
+        return trimmed, test, uprad, dorad, cstr, cdip, maxID, loc_depth
 
     if testprint:
         print('lon,lat,sdepth,ddepth,cstr,maxID,loc_depth,trimmed', lon, lat, sdepth, ddepth, cstr, maxID, loc_depth, trimmed)
@@ -2700,7 +2710,7 @@ def allFilters(eventlist, lat, lon, inside, slab1, strtmp, diptmp, seismo_thick,
     if slab == 'kur' and len(trimmed[trimmed.etype == 'TO']) > 0:
         if (len(trimmed[trimmed.etype == 'EQ']) > 0 or len(trimmed[trimmed.etype == 'ER']) > 0):
             trimmed = trimmed[trimmed.etype != 'TO']
-    return trimmed, test, sdepth, ddepth, cstr, cdip, maxID, loc_depth
+    return trimmed, test, uprad, dorad, cstr, cdip, maxID, loc_depth
 
 ###############################################
 
@@ -3408,7 +3418,7 @@ def slabShift_noGMT(tmp_res, node, T, trenches, taper_depth, taper_width, ages, 
             all_pts[i,4] = 90
         if slab == 'man' and all_pts[i, 2] > 200:
             all_pts[i,4] = 90
-        if all_pts[i, 9] == 1 and slab == 'man':
+        if all_pts[i, 9] == 1 and (slab == 'man' or slab == 'sam'):
             all_pts[i, 7] = (all_pts[i, 6]*fracS) * taper * 1.5
         else:
             all_pts[i, 7] = (all_pts[i, 6]*fracS) * taper

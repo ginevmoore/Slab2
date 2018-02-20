@@ -1343,15 +1343,19 @@ def main(args):
     shift_out['vstdv'] = vertunc
     shift_out['hstdv'] = horzunc
     
-    if slab != 'sol' and slab != 'phi' and slab != 'sul' and slab != 'alu' and slab != 'sum':
-        shift_out, rempts = s2f.removeSZnodes(shift_out, fracS, 0.1, seismo_thick)
-        rempts = rempts[['lon', 'lat', 'depth', 'stdv', 'smag', 'shiftstd', 'avstr', 'avdip', 'avrke', 'psdepth', 'sstr', 'sdip', 'nID', 'pslon', 'pslat', 'bzlon', 'bzlat', 'centsurf','thickness', 'alen', 'blen', 'clen', 'ogstr', 'ogdip','hstdv','vstdv']]
-        rempts.to_csv(rempFile, header=True, index=False, na_rep=np.nan, float_format='%.2f')
-    elif slab == 'sum' or slab == 'kur':
+    if slab == 'sum' or slab == 'kur':
         shift_out, rempts = s2f.removeSZnodes(shift_out, fracS, 0.4, seismo_thick)
+    elif slab == 'camz' or slab == 'sulz':
+        shift_out, rempts = s2f.removeSZnodes(shift_out, fracS, 0.8, seismo_thick)
+    elif slab != 'sol' and slab != 'phi' and slab != 'sul' and slab != 'alu' and slab != 'sum':
+        shift_out, rempts = s2f.removeSZnodes(shift_out, fracS, 0.1, seismo_thick)
+    else:
+        rempts = pd.DataFrame()
+    
+    if len(rempts) > 0:
         rempts = rempts[['lon', 'lat', 'depth', 'stdv', 'smag', 'shiftstd', 'avstr', 'avdip', 'avrke', 'psdepth', 'sstr', 'sdip', 'nID', 'pslon', 'pslat', 'bzlon', 'bzlat', 'centsurf','thickness', 'alen', 'blen', 'clen', 'ogstr', 'ogdip','hstdv','vstdv']]
         rempts.to_csv(rempFile, header=True, index=False, na_rep=np.nan, float_format='%.2f')
-    
+
     shift_out = shift_out[['lon', 'lat', 'depth', 'stdv', 'smag', 'shiftstd', 'avstr', 'avdip', 'avrke', 'psdepth', 'sstr', 'sdip', 'nID', 'pslon', 'pslat', 'bzlon', 'bzlat', 'centsurf','thickness', 'alen', 'blen', 'clen', 'ogstr', 'ogdip','hstdv','vstdv']]
     shift_out.to_csv(nodeFile, header=True, index=False, na_rep=np.nan, float_format='%.2f')
 

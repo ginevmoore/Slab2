@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import numpy as np
 import pandas as pd
 import slab2functions as s2f
@@ -252,6 +254,8 @@ def loop1(lons, lats, testarea, slab, depgrid, strgrid, dipgrid,
         #print 'fff',lon,lat,trimmedAA
         return lon, lat, locdep, locstr, locdip, nID, alen, blen, clen, [], used_tmp, trimmedAA, newnodes
 
+    '''nothing beyond this point in this loop gets used '''
+    
     # Trim dataset for PDF calculation and separate tomography data
     # We want to run PDF on non-TO, non-RF data
     TOdata = trimmed[trimmed.etype == 'TO']

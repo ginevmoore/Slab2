@@ -439,8 +439,8 @@ open(DAT,"$nodes");
         chomp($nogdip[$n]);
         if($nlon[$n]<0){$nlon[$n]=$nlon[$n]+360;}
         if($ndep[$n]!="nan"){
-        print OUTPOS "$nlon[$n] $nlat[$n] $ndep[$n]\n";
-        print OUTPRE "$bzlon[$n] $bzlat[$n] $npsdep[$n]\n";
+        print OUTPOS "$nlon[$n] $nlat[$n] $ndep[$n] $nnID[$n]\n";
+        print OUTPRE "$bzlon[$n] $bzlat[$n] $npsdep[$n] $nnID[$n]\n";
         }
       $n++;
    }
@@ -551,16 +551,13 @@ foreach(@sftrlon) {
     `$gmt project $indataRF -C$sftrlon[$n]/$sftrlat[$n] -A$sftraz[$n] $pW $pL -Q -S -Fpz > $folderloc/$ID\_slab2_xsecs_$folder/indata/$ID\_$n\_inRF.dat`;
     `$gmt psxy $folderloc/$ID\_slab2_xsecs_$folder/indata/$ID\_$n\_inRF.dat $R3 $J3 -Sd0.25 -Gcyan -W0.05,black -O -K >> $folderloc/$ID\_slab2_xsecs_$folder/$ID\_$n\_csec.ps`;
     
+    ## Project and plot Slab1.0
+    if ($tgs ne "na"){
     `$gmt project -C$sftrlon[$n]/$sftrlat[$n] -A$sftraz[$n] $pL -G10 -Q | awk '{if (\$1<0) {print 360+\$1, \$2} else {print \$1, \$2}}' | $gmt grdtrack -G$tgs > $folderloc/$ID\_slab2_xsecs_$folder/indata/$ID\_$n\_tgs.dat`;
     `$gmt project $folderloc/$ID\_slab2_xsecs_$folder/indata/$ID\_$n\_tgs.dat -C$sftrlon[$n]/$sftrlat[$n] -A$sftraz[$n] $pL $pW -Q -Fpz > $folderloc/$ID\_slab2_xsecs_$folder/indata/$ID\_$n\_tgs2.dat`;
     `awk '{print \$1,-\$2}' $folderloc/$ID\_slab2_xsecs_$folder/indata/$ID\_$n\_tgs2.dat | $gmt psxy -R -J -W1.75,green -O -K >> $folderloc/$ID\_slab2_xsecs_$folder/$ID\_$n\_csec.ps`;
     `awk '{print \$1,-\$2}' $folderloc/$ID\_slab2_xsecs_$folder/indata/$ID\_$n\_tgs2.dat | $gmt psxy -R -J -Sc0.15 -Ggreen -W0.25,black -O -K >>  $folderloc/$ID\_slab2_xsecs_$folder/$ID\_$n\_csec.ps`;
-    
-    ## Project and plot raw grid
-    `$gmt project -C$sftrlon[$n]/$sftrlat[$n] -A$sftraz[$n] $pL -G10 -Q | awk '{if (\$1<0) {print 360+\$1, \$2} else {print \$1, \$2}}' | $gmt grdtrack -G$raw > $folderloc/$ID\_slab2_xsecs_$folder/indata/$ID\_$n\_traw.dat`;
-    `$gmt project $folderloc/$ID\_slab2_xsecs_$folder/indata/$ID\_$n\_traw.dat -C$sftrlon[$n]/$sftrlat[$n] -A$sftraz[$n] $pL $pW -Q -Fpz > $folderloc/$ID\_slab2_xsecs_$folder/indata/$ID\_$n\_traw2.dat`;
-    `awk '{print \$1,-\$2}' $folderloc/$ID\_slab2_xsecs_$folder/indata/$ID\_$n\_traw2.dat | $gmt psxy -R -J -W1.75,red -O -K >> $folderloc/$ID\_slab2_xsecs_$folder/$ID\_$n\_csec.ps`;
-    `awk '{print \$1,-\$2}' $folderloc/$ID\_slab2_xsecs_$folder/indata/$ID\_$n\_traw2.dat | $gmt psxy -R -J -Sc0.15 -Gred -W0.25,black -O -K >>  $folderloc/$ID\_slab2_xsecs_$folder/$ID\_$n\_csec.ps`;
+    }
     
     ## Project and plot extra grid
     if ($guide ne "na"){
@@ -570,6 +567,12 @@ foreach(@sftrlon) {
     `awk '{print \$1,-\$2}' $folderloc/$ID\_slab2_xsecs_$folder/indata/$ID\_$n\_tguide2.dat | $gmt psxy -R -J -Sc0.15 -Gcyan -W0.25,black -O -K >>  $folderloc/$ID\_slab2_xsecs_$folder/$ID\_$n\_csec.ps`;
     }
 
+    ## Project and plot raw grid
+    `$gmt project -C$sftrlon[$n]/$sftrlat[$n] -A$sftraz[$n] $pL -G10 -Q | awk '{if (\$1<0) {print 360+\$1, \$2} else {print \$1, \$2}}' | $gmt grdtrack -G$raw > $folderloc/$ID\_slab2_xsecs_$folder/indata/$ID\_$n\_traw.dat`;
+    `$gmt project $folderloc/$ID\_slab2_xsecs_$folder/indata/$ID\_$n\_traw.dat -C$sftrlon[$n]/$sftrlat[$n] -A$sftraz[$n] $pL $pW -Q -Fpz > $folderloc/$ID\_slab2_xsecs_$folder/indata/$ID\_$n\_traw2.dat`;
+    `awk '{print \$1,-\$2}' $folderloc/$ID\_slab2_xsecs_$folder/indata/$ID\_$n\_traw2.dat | $gmt psxy -R -J -W1.75,red -O -K >> $folderloc/$ID\_slab2_xsecs_$folder/$ID\_$n\_csec.ps`;
+    `awk '{print \$1,-\$2}' $folderloc/$ID\_slab2_xsecs_$folder/indata/$ID\_$n\_traw2.dat | $gmt psxy -R -J -Sc0.15 -Gred -W0.25,black -O -K >>  $folderloc/$ID\_slab2_xsecs_$folder/$ID\_$n\_csec.ps`;
+    
     ## Project and plot bathymetry data
     `$gmt project -C$sftrlon[$n]/$sftrlat[$n] -A$sftraz[$n] -G10 $pL -Q | awk '{print \$1, \$2}' | $gmt grdtrack -G$GEBCO | $gmt project -C$sftrlon[$n]/$sftrlat[$n] -A$sftraz[$n] $pL $pW -Q -Fpz | awk '{print \$1,-\$2/1000}' | $gmt psxy -R -J -W2.5,blue -O -K >> $folderloc/$ID\_slab2_xsecs_$folder/$ID\_$n\_csec.ps`;
 
