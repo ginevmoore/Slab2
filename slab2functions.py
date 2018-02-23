@@ -1622,6 +1622,72 @@ def epCalc(lon, lat, dep, dip, strike, posmag, negmag, step):
 
 def mkSDgrd(Slabgrid):
     
+    # Get depth grid boundaries, size, and spacing
+    gdict = Slabgrid.getGeoDict().copy()
+    nx = gdict.nx
+    ny = gdict.ny
+    dx = gdict.dx
+    dy = gdict.dy
+    xmin = gdict.xmin
+    xmax = gdict.xmax
+    ymin = gdict.ymin
+    ymax = gdict.ymax
+    
+    # Create lat/lon grid from parameters above
+    dlats = np.linspace(ymax, ymin, ny)
+    dlons = np.linspace(xmin, xmax, nx)
+    dlons[dlons<0] += 360
+    
+    # the guides always have negative depths, account for this
+    depthgrid = Slabgrid.getData().copy()*-1.0
+    
+    # initialize unfactored spacing in km between degrees
+    alldy = dy * 111.19
+    alldx = dx * 111.19
+    Xgrad, Ygrad = [],[]
+    
+    # loop through list of latitudes, calculate gradient at each
+    for i in range(1, ny - 1):
+        
+        # get row at this lat, also one row N and one row S
+        thisgrid = depthgrid[i - 1:i + 2,:]
+        
+        # calculate longitude distance at this lat
+        thisy = math.radians(abs(dlats[i]))
+        thisdx = alldx * math.cos(thisy)
+        
+        # calculate gradient at these 3 rows
+        gradyi, gradxi = np.gradient(thisgrid, alldy, thisdx)
+        
+        # if it is the first calculation, add first two rows of this grad
+        if len(Xgrad) < 1:
+            Xgrad = gradxi[0:2, :]
+            Ygrad = gradyi[0:2, :]
+        
+        # otherwise, only add the middle row of this grad
+        else:
+            Xgrad = np.vstack((Xgrad, gradxi[1, :]))
+            Ygrad = np.vstack((Ygrad, gradyi[1, :]))
+
+    # add the last row of the last grad to end of grid
+    Xgrad = np.vstack((Xgrad, gradxi[2, :]))
+    Ygrad = np.vstack((Ygrad, gradyi[2, :]))
+    
+    # Get gradient magnitude
+    Maggrid = np.sqrt((Ygrad**2)+(Xgrad**2))
+    
+    # Define a grid file that is the direction perpendicular to the max gradient
+    Dirgrid = np.degrees(np.arctan2(Ygrad, Xgrad))
+    Dirgrid = np.where(Dirgrid < 0, Dirgrid+360, Dirgrid)
+
+    # Assign strike and dip arrays to grids with same dimensions as depth grid
+    Dipgrid = gmt.GMTGrid(np.degrees(np.arctan2(Maggrid, 1)), Slabgrid.getGeoDict().copy())
+    Strikegrid = gmt.GMTGrid(Dirgrid, Slabgrid.getGeoDict().copy())
+
+    return Strikegrid, Dipgrid
+
+def mkSDgrd_old(Slabgrid):
+    
     # Get depth grid parameters
     gdict = Slabgrid.getGeoDict().copy()
     
@@ -1646,6 +1712,68 @@ def mkSDgrd(Slabgrid):
     return Strikegrid, Dipgrid
 
 def mkSDgrddata(xi, zi, flipornot):
+    
+    # get dx, dy, and list of lats from zi coordinates (listed in xi)
+    xpts, ypts = xi[:, 0], xi[:, 1]
+    xpts.shape = zi.shape
+    ypts.shape = zi.shape
+    dlats = ypts[:, 0]
+    dlons = xpts[0, :]
+    ny = len(dlats)
+    nx = len(dlons)
+    dy = abs(dlats[1] - dlats[0])
+    dx = abs(dlons[1] - dlons[0])
+    
+    # flip array over if needed
+    if flipornot == 'flip':
+        depthgrid = np.flipud(zi)
+    else:
+        depthgrid = np.copy(zi)
+
+    # initialize grid spacing in km
+    alldy = dy * 111.19
+    alldx = dx * 111.19
+    Xgrad, Ygrad = [],[]
+
+    # loop through lats and get gradient, use different lon spacing for each lat
+    for i in range(1, ny - 1):
+        thisgrid = depthgrid[i - 1:i + 2,:]
+        thisy = math.radians(abs(dlats[i]))
+        thisdx = alldx * math.cos(thisy)
+        gradyi, gradxi = np.gradient(thisgrid, alldy, thisdx)
+        
+        # add first two lines to gradient if first loop
+        if len(Xgrad) < 1:
+            Xgrad = gradxi[0:2, :]
+            Ygrad = gradyi[0:2, :]
+        
+        # otherwise, add just this row to the gradient array
+        else:
+            Xgrad = np.vstack((Xgrad, gradxi[1, :]))
+            Ygrad = np.vstack((Ygrad, gradyi[1, :]))
+
+    # add the last row to the gradient array
+    Xgrad = np.vstack((Xgrad, gradxi[2, :]))
+    Ygrad = np.vstack((Ygrad, gradyi[2, :]))
+
+    # Get gradient magnitude
+    Maggrid = np.sqrt((Ygrad**2)+(Xgrad**2))
+
+    # Define a grid file that is the direction perpendicular to the max gradient
+    Strikegrid = np.degrees(np.arctan2(Ygrad, Xgrad))
+    Strikegrid = np.where(Strikegrid < 0, Strikegrid+360, Strikegrid)
+
+    # Assign strike and dip arrays to grids with same dimensions as depth grid
+    Dipgrid = np.degrees(np.arctan2(Maggrid, 1))
+
+    # flip grids upside down if needed
+    if flipornot == 'flip':
+        Strikegrid = np.flipud(Strikegrid)
+        Dipgrid = np.flipud(Dipgrid)
+
+    return Strikegrid, Dipgrid
+
+def mkSDgrddata_old(xi, zi, flipornot):
     
     dx = abs(xi[1, 0]-xi[0, 0])*111.19
     dy = dx
@@ -1880,43 +2008,6 @@ def ellipseFilt(elist, lat, lon, alen, blen, cstr, mdist):
         trimmed = getEventsInEllipse(rlon, rlat, cstr, alen, blen, elist, lon, lat)
 
         return trimmed
-
-def ellipseFilt2(elist, lat, lon, alen, blen, cstr, mdist):
-
-    x = elist['lon'].values*1.0
-    y = elist['lat'].values*1.0
-    
-    utmtuple = utm.from_latlon(y, x)
-    #print ('utmtuple',utmtuple)
-
-    # The ellipse
-    g_ell_center = (lon, lat)
-    g_ell_width = alen/111.19
-    g_ell_height = blen/111.19
-    angle = 90.0-cstr
-    if angle<0:
-        angle += 360.0
-
-    g_ellipse = patches.Ellipse(g_ell_center, g_ell_width, g_ell_height, angle=angle)
-
-    cos_angle = np.cos(np.radians(180.-angle))
-    sin_angle = np.sin(np.radians(180.-angle))
-
-    xc = x - g_ell_center[0]
-    yc = y - g_ell_center[1]
-
-    xct = xc * cos_angle - yc * sin_angle
-    yct = xc * sin_angle + yc * cos_angle 
-
-    rad_cc = (xct**2/(g_ell_width/2.)**2) + (yct**2/(g_ell_height/2.)**2)
-
-    elist['radtest'] = rad_cc
-    #print ('before radtest',elist)
-    elist = elist[elist.radtest <= 1]
-    #print ('after radtest', elist)
-    elist = elist[['lon', 'lat', 'depth', 'unc', 'etype', 'ID', 'mag', 'time', 'S1', 'D1', 'R1', 'S2', 'D2', 'R2', 'src', 'distance']]
-
-    return elist
 
 def haversine(lon1, lat1, lon2, lat2):
     """
@@ -3452,6 +3543,177 @@ def slabShift_noGMT(tmp_res, node, T, trenches, taper_depth, taper_width, ages, 
 
     return shift_out, maxthickness
 
+def newSlabShift(tmp_res, node, T, trenches, taper_depth, taper_width, ages, ages_error, filterwidth, slab, maxthickness, spacing, lonname, latname, depthname, fracS, fill_dat, meanBA, testprint, kdeg, knot_no, rbfs, use_box):
+    
+    tmp_res2 = pd.concat([tmp_res, fill_dat])
+    tmpdata = np.zeros((len(tmp_res2), 4))
+    tmpdata[:, 0], tmpdata[:, 1] = tmp_res2[lonname].values, tmp_res2[latname].values
+    try:
+        tmpdata[:, 2], tmpdata[:, 3] = tmp_res2['depth'].values, tmp_res2['stdv'].values
+    except:
+        tmpdata[:, 2], tmpdata[:, 3] = tmp_res2['depth'].values, tmp_res2['unc'].values
+
+    print ('        generating shifting surface ...')
+
+    Surfgrid, xi, dl = pySurface4(tmpdata, node, T, slab, spacing, 'depth', 'time', 'test.txt', filterwidth, pd.DataFrame(), 1, trenches, meanBA, kdeg, knot_no, rbfs, tmp_res, 'shift', 'og')
+    flipornot = 'dontflip'
+
+    sigma = (3.0/2.0) / spacing
+    if slab == 'mue':
+        sigma = (1.0/2.0) / spacing
+    filtshifted = ndimage.filters.gaussian_filter(Surfgrid, sigma)
+
+    strgrid, dipgrid = mkSDgrddata(xi, filtshifted, flipornot)
+
+    Filtgrid = pd.DataFrame({'lon':xi[:, 0],'lat':xi[:, 1],'depth':filtshifted.flatten(),'strike':strgrid.flatten(),'dip':dipgrid.flatten()})
+
+    Filtgrid = Filtgrid[(np.isfinite(Filtgrid.depth))&(np.isfinite(Filtgrid.strike))&(np.isfinite(Filtgrid.dip))]
+    #Filtgrid.to_csv('shiftingsurface.csv',header=True,index=False,na_rep=np.nan)
+
+    # Determine age of plate at trench
+    if len(trenches)>0 and slab != 'helz':
+        trench_age = np.zeros((len(trenches['lon'].values), 4))
+        trench_age[:, 0], trench_age[:, 1] = trenches['lon'].values, trenches['lat'].values
+        trench_age[:, 0][trench_age[:, 0]>180] -= 360
+
+        for i in range(len(trench_age)):
+            if trench_age[i, 0] > 179.8 and trench_age[i, 0] < 180.1: #GLM 11.30.16 eventually fix ages file
+                trench_age[i, 0] = 179.8
+            trench_age[i, 2] = ages.getValue(trench_age[i, 1], trench_age[i, 0])/100 # GLM 11.16.16 [i,2] instead of [:,2]
+            trench_age[i, 3] = ages_error.getValue(trench_age[i, 1], trench_age[i, 0])/100
+
+        trench_age[:,0][trench_age[:,0]<0] += 360
+
+        trench_age[trench_age==327.] = np.nan  # Hardwired 327 because of default value of age grid file
+        ta0, ta1, ta2, ta3 = trench_age[:, 0], trench_age[:, 1], trench_age[:, 2], trench_age[:, 3]
+        ta0, ta1, ta2, ta3 = ta0[np.isfinite(ta3)], ta1[np.isfinite(ta3)], ta2[np.isfinite(ta3)], ta3[np.isfinite(ta3)]
+
+        trench_age = np.zeros((len(ta0), 4))
+        trench_age[:, 0], trench_age[:, 1], trench_age[:, 2], trench_age[:, 3] = ta0, ta1, ta2, ta3
+
+    # Determine strike, dip, nearest trench for each input datum
+    all_pts = np.zeros((len(tmp_res), 10))
+    
+    # Fill in lat,lon,dep from original data
+    all_pts[:, 0], all_pts[:, 1], all_pts[:, 2] = tmp_res['bzlon'].values, tmp_res['bzlat'].values, tmp_res['depth'].values
+
+    surfarr = np.zeros((len(Filtgrid), 4))
+    #surfarr = np.zeros((len(Filtgrid),2))
+    surfarr[:, 0] = Filtgrid['lon'].values
+    surfarr[:, 1] = Filtgrid['lat'].values
+    surfarr[:, 2] = Filtgrid['strike'].values
+    surfarr[:, 3] = Filtgrid['dip'].values
+
+    # Fill in plate age and error
+    if len(trenches) > 0 and slab != 'helz':
+        all_pts[:, 5] = griddata(trench_age[:, 0:2], trench_age[:, 2], all_pts[:, 0:2], method='nearest')
+        all_pts[:, 8] = griddata(trench_age[:, 0:2], trench_age[:, 3], all_pts[:, 0:2], method='nearest')
+    else:
+        all_pts[:, 5] = 75
+        all_pts[:, 8] = 20
+    
+    # Fill in strike and dip from original slab center surface
+    all_pts[:, 3] = griddata(surfarr[:, 0:2], surfarr[:, 2], all_pts[:, 0:2], method='nearest')
+    all_pts[:, 4] = griddata(surfarr[:, 0:2], surfarr[:, 3], all_pts[:, 0:2], method='nearest')
+    
+    # Calculating crustal thickness
+    """ References
+        thermal conductivity (lithosphere): k = 3.138 W/m C (Stein and Stein, 1996)
+        specific heat (lithosphere): Cp = 1.171 kJ/kg C (Stein and Stein, 1996)
+        density (mantle): rhom = 3330 kg/m^3 (Stein and Stein, 1996)
+        thermal diffusivity (lithosphere): kappa = k/(Cp*rhom) = ~0.8E-6 m^2/s
+        thickness (lithosphere): h = 2.32 * sqrt(kappa*age) where age is in seconds and h is in meters (Turcotte and Schubert)
+            **base of lithosphere defined when (T-T1)/(T0-T1) = 0.1 (see T&S eqs. 4.93 and 4.115)
+    """
+
+    k = 3.138
+    Cp = 1171.
+    pm = 3330.
+    kappa = k / (Cp*pm)  # For explanation see above
+
+    new_pts = np.zeros((len(all_pts), 9))
+
+    #centsurf = tmp_res['centsurf'].values
+    for i in range(len(all_pts)):
+
+        age_sec = all_pts[i, 5] * 1000000 * 365.25 * 24 * 60 * 60  # Convert age in Myr to age in seconds
+        all_pts[i, 6] = 2.32 * math.sqrt(kappa * age_sec) / 1000  # Divide by 1000 converts from meters to kilometers - thickness
+        if slab == 'hal' or slab == 'pam' or slab == 'hin' or slab == 'him':
+            all_pts[i,6] = 100
+
+    max_thickness = 5000
+
+    if taper_width == max_thickness:
+        taper_width = np.max(all_pts[:, 6])
+    else:
+        taper_width = taper_width
+
+    maxthickness = np.max(all_pts[:, 6])
+    all_pts[:,9] = tmp_res['onlyto'].values
+
+    for i in range(len(all_pts)):
+        error_sec = all_pts[i, 8] * 1000000 * 365.25 * 24 * 60 * 60  # Convert error to seconds
+
+        if all_pts[i, 2] <= taper_depth:
+            new_pts[i, 0:3] = all_pts[i, 0:3]
+            all_pts[i, 7] = 0
+            new_pts[i, 3] = 0  # Thickness error
+            continue
+
+        elif all_pts[i, 2] > taper_depth and all_pts[i, 2] < taper_depth+taper_width:
+        
+            x = taper_width/math.sin(np.radians(all_pts[i, 4]))
+            dzs = abs(all_pts[i,2] - taper_depth)
+            dxs = dzs/math.sin(np.radians(all_pts[i, 4]))
+            taper = dxs/x
+            if testprint:
+                print (all_pts[i,2],all_pts[i,4],x,dxs,dzs,taper_depth-taper_width,taper_depth+taper_width,taper*2,taper_depth,taper)
+            taper = dzs/(2*taper_width)
+            if testprint:
+                print ('all_pts[i,2],all_pts[i,4],x,dxs,dzs,taper_depth-taper_width,taper_depth+taper_width,taper*2,taper_depth,taper')
+                print (all_pts[i,2],all_pts[i,4],x,dxs,dzs,taper_depth-taper_width,taper_depth+taper_width,taper*2,taper_depth,taper)
+
+        else:
+            taper = 1.0
+
+        if all_pts[i,4] > 60 and slab != 'alu':
+            all_pts[i,4] = 90
+        if slab == 'man' and all_pts[i, 2] > 200:
+            all_pts[i,4] = 90
+        if all_pts[i, 9] == 1 and (slab == 'man' or slab == 'sam'):
+            all_pts[i, 7] = (all_pts[i, 6]*fracS) * taper * 1.5
+        else:
+            all_pts[i, 7] = (all_pts[i, 6]*fracS) * taper
+
+        if slab == 'muez':
+            all_pts[i, 4] *= 1.5
+        
+        new_pts[i, 0], new_pts[i, 1], new_pts[i, 2] = pointShift(all_pts[i, 0], all_pts[i, 1], all_pts[i, 2], all_pts[i, 4], all_pts[i, 3], all_pts[i, 7])
+
+        age_sec = all_pts[i, 5] * 1000000 * 365.25 * 24 * 60 * 60
+        new_pts[i, 3] = math.sqrt(math.pow((2.32 * k * taper / (math.sqrt(kappa * age_sec) * Cp * pm * 1000. * 2. )), 2)*math.pow((error_sec/10.), 2) +
+                              math.pow((2.32 * age_sec * taper / (math.sqrt(kappa * age_sec) * Cp * pm * 1000. * 2. )), 2)*math.pow((k/10.), 2) +
+                              math.pow((-1. * 2.32 * k * age_sec * taper / (math.pow((kappa * age_sec), (3./2.)) * Cp * 1000. * 2. )), 2)*math.pow((pm/10.), 2) +
+                              math.pow((-1. * 2.32 * k * age_sec * taper / (math.pow((kappa * age_sec), (3./2.)) * pm * 1000. * 2. )), 2)*math.pow((Cp/10.), 2))
+        if testprint:
+            print ('new_pts[i, 0], new_pts[i, 1], new_pts[i, 2]', new_pts[i, 0], new_pts[i, 1], new_pts[i, 2])
+            print ('lon,lat,depth,strike,dip,thickness,taper,taper-depth,taper-width',all_pts[i,0],all_pts[i,1],all_pts[i,2],all_pts[i,3],all_pts[i,4],all_pts[i,7],taper,taper_depth,taper_width)
+
+    new_pts[:, 4] = all_pts[:, 7]
+    try:
+        new_pts[:, 5] = tmp_res['nID'].values
+    except:
+        new_pts[:, 5] = tmp_res['ID'].values
+    new_pts[:, 6] = all_pts[:, 2]
+    new_pts[:, 7] = all_pts[:, 3]
+    new_pts[:, 8] = all_pts[:, 4]
+
+    new_pts[:, 0][new_pts[:, 0]<0] += 360
+
+    shift_out = pd.DataFrame({'lon':new_pts[:, 0],'lat':new_pts[:, 1],'depth':new_pts[:, 2],'shiftstd':new_pts[:, 3],'smag':new_pts[:, 4],'nID':new_pts[:, 5].astype(int),'sstr':new_pts[:, 7],'sdip':new_pts[:, 8],'thickness':all_pts[:,6]})
+
+    return shift_out, maxthickness
+
 
 ## Written GLM 11.21.2016
 def az_perp(x):
@@ -4493,37 +4755,6 @@ def myfilter(data):
 
     return newdf2
 
-def mkSDdata(lons, lats, xpts, ypts, zis, zi, filter, spacing, slab):
-
-    dx = abs(lons[1]-lons[0])* 111.19
-    dy = abs(lons[1]-lons[0])* 111.19
-    Xgrad, Ygrad = np.gradient(zi, dx, dy, edge_order=2)
-    Xgrads, Ygrads = np.gradient(zis, dx, dy, edge_order=2)
-    Maggrid = np.sqrt((Xgrad**2)+(Ygrad**2))
-    Dirgrid = np.degrees(np.arctan2(Xgrads, Ygrads))
-    strikegrid = np.where(Dirgrid < 0, Dirgrid+360, Dirgrid)
-    sigma = (filter/2.0) / spacing
-    dipgridOG = np.degrees(np.arctan2(Maggrid, 1))
-    
-    Xgrad, Ygrad = np.gradient(dipgridOG, dx, dy, edge_order=2)
-    Maggrid = np.sqrt((Xgrad**2)+(Ygrad**2))
-    dipgrid = np.degrees(np.arctan2(Maggrid, 1))
-
-    alldata = pd.DataFrame({'lon':xpts.flatten(),'lat':ypts.flatten(),'depth':zi.flatten(),'strike':strikegrid.flatten(),'dip':dipgridOG.flatten(),'dip2':dipgrid.flatten()})
-    alldata = alldata[np.isfinite(alldata.strike)]
-    
-    if slab == 'alu':
-        alldata = alldata[alldata.strike > 180]
-    if slab == 'sam':
-        alldata = alldata[(alldata.strike < 90) | (alldata.strike > 270)]
-    if slab == 'kur':
-        alldata = alldata[(alldata.strike < 300) | (alldata.strike > 120)]
-    alldata = alldata[alldata.dip2 > 1]
-    alldata = alldata[alldata.dip2 < 50]
-    
-    alldata = alldata.iloc[::16,:]
-    return alldata
-
 def maskdatag(clip2, xi):
 
     clip = clip2.copy()
@@ -4801,17 +5032,8 @@ def rbffill(data, sigma, lonname, latname, depthname, filter, slab, smoother, gr
     xyzip[:, 0] = xpts.flatten()
     xyzip[:, 1] = ypts.flatten()
     zif = ndimage.filters.gaussian_filter(zi, sigma/2)
-
-    dx = gridsp * 111.19
-    dy = gridsp * 111.19
-
-    Xgrad, Ygrad = np.gradient(np.flipud(zif), dx, dy)
-    Maggrid = np.sqrt((Xgrad**2)+(Ygrad**2))
-    Dirgrid = np.degrees(np.arctan2(Xgrad, Ygrad))
-    strikegrid = np.where(Dirgrid < 0, Dirgrid+360, Dirgrid)
-    dipgrid = np.degrees(np.arctan2(Maggrid, 1))
-    strikegrid = np.flipud(strikegrid)
-    dipgrid = np.flipud(dipgrid)
+    
+    strikegrid, dipgrid = mkSDgrddata(xyzip, zif, 'flip')
     
     newdat = np.zeros((len(zif.flatten()), 5))
     newdat[:, 0], newdat[:, 1], newdat[:, 2] = xpts.flatten(), ypts.flatten(), zif.flatten()
@@ -4851,16 +5073,8 @@ def linfill(data, sigma, lonname, latname, depthname, filter, slab, node):
     xyzip[:, 0] = xpts.flatten()
     xyzip[:, 1] = ypts.flatten()
     zif = ndimage.filters.gaussian_filter(zi, sigma/2)
-    dx = gridsp * 111.19
-    dy = gridsp * 111.19
-
-    Xgrad, Ygrad = np.gradient(np.flipud(zif), dx, dy)
-    Maggrid = np.sqrt((Xgrad**2)+(Ygrad**2))
-    Dirgrid = np.degrees(np.arctan2(Xgrad, Ygrad))
-    strikegrid = np.where(Dirgrid < 0, Dirgrid+360, Dirgrid)
-    dipgrid = np.degrees(np.arctan2(Maggrid, 1))
-    strikegrid = np.flipud(strikegrid)
-    dipgrid = np.flipud(dipgrid)
+    
+    strikegrid, dipgrid = mkSDgrddata(xyzip, zif, 'flip')
     
     newdat = np.zeros((len(zif.flatten()), 5))
     newdat[:, 0], newdat[:, 1], newdat[:, 2] = xpts.flatten(), ypts.flatten(), zif.flatten()
@@ -4993,6 +5207,72 @@ def pySurface3(data, node, T, slab, spacing, deptherr, time, these_parameters, f
     interpdepths.shape = xpts.shape
 
     return interpdepths, xi, dl
+
+def pySurface4(data, node, T, slab, spacing, deptherr, time, these_parameters, filter, filldat, nCores, TRdata, meanBA, kdeg, knot_no, rbfs, shift_out, shiftorfin, extra):
+
+    knot_no = 2
+    data[:, 0][data[:, 0]<0] += 360
+    if len(filldat) > 0:
+        filldat[:, 0][filldat[:, 0]<0] += 360
+    xmin, xmax = np.min(data[:, 0]), np.max(data[:, 0])
+    ymin, ymax = np.min(data[:, 1]), np.max(data[:, 1])
+    
+    deglats = (data[:, 1] - 90)*-1.0
+    radlats = np.radians(deglats)
+    radlons = np.radians(data[:, 0])
+
+    rxn,rxx,ryn,ryx = np.min(radlons),np.max(radlons),np.min(radlats),np.max(radlats)
+
+    rnode = np.radians(node)
+    rbuff = np.radians(3.0)
+    xall = np.arange(rxn-rbuff, rxx+rbuff, rnode)
+    if slab == 'kur':
+        xall = np.arange(rxn-(rbuff*2.5), rxx+rbuff, rnode)
+    yall = np.arange(ryn-rbuff, ryx+rbuff, rnode)
+    dl = False
+
+    n = len(xall)
+    m = len(yall)
+
+    xpts, ypts = np.meshgrid(xall, yall)
+    xi = np.zeros((m*n, 2))
+
+    xi[:, 0] = np.degrees(xpts.flatten())
+    xi[:, 1] = 90.0 - np.degrees(ypts.flatten())
+
+    if len(filldat) > 0:
+        data = np.vstack((data[:,:4], filldat[:,:4]))
+    data[:, 3][np.isnan(data[:, 3])] = 40
+
+    x = data[:, 0]
+    y = (data[:, 1]-90)*-1
+    z = data[:, 2]
+    w = 1.0/data[:, 3]
+
+    xrad = np.radians(x)
+    yrad = np.radians(y)
+    yrad[yrad<0] = math.pi/2.0+np.abs(yrad[yrad<0])
+    zrad = z
+
+    ntx = int(abs(np.floor(xmin)-np.ceil(xmax))*knot_no)
+    nty = int(abs(np.floor(ymin)-np.ceil(ymax))*knot_no)
+
+    tx = np.linspace(xall.min(), xall.max(), ntx)
+    ty = np.linspace(yall.min(), yall.max(), nty)
+    
+    if deptherr == 'depth':
+        f = open(these_parameters, 'a')
+        f.write('knot_no: %s \n' % str(knot_no))
+        f.write('kdeg: %s \n' % str(kdeg))
+        f.close()
+    print ('               interpolating ....')
+    lut = LSQSphereBivariateSpline(yrad, xrad, zrad, ty[1:-1], tx[1:-1], w=w)
+    print ('               interpolated')
+    interpdepths = lut.ev(ypts.flatten(), xpts.flatten())
+    interpdepths.shape = xpts.shape
+
+    return interpdepths, xi, dl
+
 
 def gblockmean(xpts,ypts,interpdepths,tx,ty,bwidth,w,xrad,yrad):
 
@@ -10462,3 +10742,99 @@ def makepolymask(slabname,slabfile):
     polyclip = pd.DataFrame({'lon':lons, 'lat':lats})
 
     return polyclip
+
+def preshiftfill(tmp_res, emptynodes, refdeps, mindip, dipthresh):
+
+    # merge reference depths for nodes with data with filled node data frame
+    tmp_res = pd.merge(tmp_res, refdeps)
+    
+    # initialize arrays for interpolating over
+    fulln = np.zeros((len(tmp_res),15))
+    emptn = np.zeros((len(emptynodes),15))
+    
+    # set original search locations and vectors (nodes with data)
+    fulln[:,0] = tmp_res['lon'].values*1.0
+    fulln[:,1] = tmp_res['lat'].values*1.0
+    fulln[:,2] = tmp_res['ogdep'].values*1.0
+    fulln[:,3] = tmp_res['ogstr'].values*1.0
+    fulln[:,4] = tmp_res['ogdip'].values*1.0
+    
+    # set original search locations and vectors (nodes w/o data)
+    emptn[:,0] = emptynodes['lon'].values*1.0
+    emptn[:,1] = emptynodes['lat'].values*1.0
+    emptn[:,2] = emptynodes['ogdep'].values*1.0
+    emptn[:,3] = emptynodes['ogstr'].values*1.0
+    emptn[:,4] = emptynodes['ogdip'].values*1.0
+    
+    # modify search vectors according to perp search dip bounds
+    emptn[:,4][emptn[:,4] > dipthresh] = 90.0
+    emptn[:,4][emptn[:,4] < mindip] = 0.0
+    
+    # add other info to nodes with data array
+    fulln[:,5] = tmp_res['bzlon'].values*1.0
+    fulln[:,6] = tmp_res['bzlat'].values*1.0
+    fulln[:,7] = tmp_res['depth'].values*1.0
+    fulln[:,8] = tmp_res['stdv'].values*1.0
+    fulln[:,9] = tmp_res['centsurf'].values*1.0
+    fulln[:,12] = tmp_res['onlyto'].values*1
+    
+    # get r, phi, theta values for search points and peak points (nodes w data)
+    r1 = 6371 - tmp_res['ogdep'].values
+    r2 = 6371 - tmp_res['depth'].values
+
+    p1 = np.radians(tmp_res['lon'].values)
+    p2 = np.radians(tmp_res['bzlon'].values)
+
+    t1 = np.radians(np.abs(tmp_res['lat'].values - 90.0))
+    t2 = np.radians(np.abs(tmp_res['bzlat'].values - 90.0))
+    
+    # find distance between reference point and center of benioff zone
+    dist = r1*r1 + r2*r2 - 2*r1*r2*(np.sin(t1)*np.sin(t2)*np.cos(p1-p2) + np.cos(t1)*np.cos(t2))
+    
+    # determine shift direction (inboard or outboard from point)
+    inorout = np.ones(len(dist))*-1.0
+    for i in range(len(fulln)):
+        reflon, reflat = fulln[i,0], fulln[i,1]
+        bzlon, bzlat = fulln[i,5], fulln[i,6]
+        xydist, ang, x1, y1 = cosine(reflon, reflat, bzlon, bzlat)
+        outhere = isoutboard(fulln[i,3], ang)
+        if outhere:
+            inorout[i] = 1.0
+    
+    # add outboard and distance values to array
+    fulln[:,10] = dist
+    fulln[:,11] = inorout
+    
+    # interpolate values to nodes without data
+    emptn[:, 8] = griddata(fulln[:, 0:2], fulln[:, 8], emptn[:, 0:2], method='nearest')
+    emptn[:, 9] = griddata(fulln[:, 0:2], fulln[:, 9], emptn[:, 0:2], method='nearest')
+    emptn[:, 10] = griddata(fulln[:, 0:2], fulln[:, 10], emptn[:, 0:2], method='nearest')
+    emptn[:, 11] = griddata(fulln[:, 0:2], fulln[:, 11], emptn[:, 0:2], method='nearest')
+    emptn[:, 12] = griddata(fulln[:, 0:2], fulln[:, 12], emptn[:, 0:2], method='nearest')
+    #emptn[:, 10] *= emptn[:, 11]
+    emptn[:, 10] /= 1000
+    emptn[:, 12][emptn[:, 12] < 0.5] = 0
+    emptn[:, 12][emptn[:, 12] >= 0.5] = 1
+
+    # loop through empty nodes and find "interpolated" center of benioff zone
+    for i in range(len(emptn)):
+        ipslon, ipslat, ipsdep = emptn[i, 0], emptn[i, 1], emptn[i, 2]
+        istrike, idip, idist = emptn[i, 3], emptn[i, 4], emptn[i, 10]
+        ibzlon, ibzlat, ibzdep = pointShift(ipslon, ipslat, ipsdep, idip, istrike, idist)
+        emptn[i, 5] = ibzlon
+        emptn[i, 6] = ibzlat
+        emptn[i, 7] = ibzdep
+
+    emptynodes['bzlon'] = emptn[:, 5]
+    emptynodes['bzlat'] = emptn[:, 6]
+    emptynodes['depth'] = emptn[:, 7]
+    emptynodes['stdv'] = emptn[:, 8] * 10
+    emptynodes['centsurf'] = emptn[:, 9]
+    emptynodes['onlyto'] = emptn[:, 12]
+    emptynodes['smag1'] = emptn[:, 10]
+    emptynodes['inorout'] = emptn[:, 11]
+
+    emptynodes = emptynodes[np.isfinite(emptynodes.bzlon)]
+
+    return emptynodes
+

@@ -192,6 +192,7 @@ def main(args):
     outFile = 'Output/%s/%s_slab2_res_%s.csv' % (folder, slab, date)
     dataFile = 'Output/%s/%s_slab2_dat_%s.csv' % (folder, slab, date)
     nodeFile = 'Output/%s/%s_slab2_nod_%s.csv' % (folder, slab, date)
+    fillFile = 'Output/%s/%s_slab2_fil_%s.csv' % (folder, slab, date)
     rempFile = 'Output/%s/%s_slab2_rem_%s.csv' % (folder, slab, date)
     clipFile = 'Output/%s/%s_slab2_clp_%s.csv' % (folder, slab, date)
     these_params = 'Output/%s/%s_slab2_par_%s.csv' % (folder, slab, date)
@@ -356,6 +357,8 @@ def main(args):
     # Calculate strike and dip grids
     strgrid, dipgrid = s2f.mkSDgrd(depgrid)
     slab1data = s2f.mkSlabData(depgrid, strgrid, dipgrid, printtest)
+
+    slab1data.to_csv('gradtest.csv',header=True,index=False)
 
     # Add slab guide data to Slab1.0 grids where necessary
     if slabguide is not None:
@@ -534,7 +537,7 @@ def main(args):
         seismo_thick = 40
     if slab == 'sol':
         seismo_thick = 40
-    if slab == 'alu' or slab == 'cot':
+    if slab == 'alu' or slab == 'cot' or slab == 'sul':
         seismo_thick = 10
     
     #exit()
@@ -710,7 +713,6 @@ def main(args):
 
     print("Start Section 2 of 7: First loop")
 
-    lons1, lats1, deps1, strs1, dips1, nIDs1, farpt = [], [], [], [], [], [], []
     lons1 = (np.ones(len(lons))*-9999).astype(np.float64)
     lats1 = (np.ones(len(lons))*-9999).astype(np.float64)
     deps1 = (np.ones(len(lons))*-9999).astype(np.float64)
@@ -720,7 +722,20 @@ def main(args):
     aleng = (np.ones(len(lons))*-9999).astype(np.float64)
     bleng = (np.ones(len(lons))*-9999).astype(np.float64)
     cleng = (np.ones(len(lons))*-9999).astype(np.float64)
-    
+    sleng = (np.ones(len(lons))*-9999).astype(np.float64)
+    dleng = (np.ones(len(lons))*-9999).astype(np.float64)
+
+    elons1 = (np.ones(len(lons))*-9999).astype(np.float64)
+    elats1 = (np.ones(len(lons))*-9999).astype(np.float64)
+    edeps1 = (np.ones(len(lons))*-9999).astype(np.float64)
+    estrs1 = (np.ones(len(lons))*-9999).astype(np.float64)
+    edips1 = (np.ones(len(lons))*-9999).astype(np.float64)
+    enIDs1 = (np.ones(len(lons))*-9999).astype(np.float64)
+    ealeng = (np.ones(len(lons))*-9999).astype(np.float64)
+    ebleng = (np.ones(len(lons))*-9999).astype(np.float64)
+    ecleng = (np.ones(len(lons))*-9999).astype(np.float64)
+    esleng = (np.ones(len(lons))*-9999).astype(np.float64)
+    edleng = (np.ones(len(lons))*-9999).astype(np.float64)
     
     if args.nCores is not None:
         if args.nCores > 1 and args.nCores < 8:
@@ -761,7 +776,7 @@ def main(args):
             
             for i in range(len(indices)):
                 thisnode = pts[i]
-                if np.isfinite(thisnode[2]):
+                if thisnode[13]:
                 
                     lons1[i2] = thisnode[0]
                     lats1[i2] = thisnode[1]
@@ -772,6 +787,8 @@ def main(args):
                     aleng[i2] = thisnode[6]
                     bleng[i2] = thisnode[7]
                     cleng[i2] = thisnode[8]
+                    sleng[i2] = thisnode[14]
+                    dleng[i2] = thisnode[15]
 
                     nused_TO = thisnode[9]
                     if len(nused_TO) > 0:
@@ -786,29 +803,35 @@ def main(args):
                         if AAadd['unc'].mean() > 5:
                             AAadd['etype'] = 'RF'
                         elistAA = pd.concat([elistAA, AAadd])
-                    newnodes = thisnode[12]
-                    if len(newnodes)>0:
-                        if allnewnodes is not None:
-                            allnewnodes = np.vstack((allnewnodes,newnodes))
-                        else:
-                            allnewnodes = newnodes
             
-                elif len(thisnode[12]) > 0:
-                    newnodes = thisnode[12]
-                    if len(newnodes)>0:
-                        if allnewnodes is not None:
-                            allnewnodes = np.vstack((allnewnodes,newnodes))
-                        else:
-                            allnewnodes = newnodes
-        
+                newnodes = thisnode[12]
+                if len(newnodes)>0:
+                    if allnewnodes is not None:
+                        allnewnodes = np.vstack((allnewnodes,newnodes))
+                    else:
+                        allnewnodes = newnodes
+                        
+                if not thisnode[13] and np.isfinite(thisnode[2]):
+                    elons1[i2] = thisnode[0]
+                    elats1[i2] = thisnode[1]
+                    edeps1[i2] = thisnode[2]
+                    estrs1[i2] = thisnode[3]
+                    edips1[i2] = thisnode[4]
+                    enIDs1[i2] = thisnode[5]
+                    ealeng[i2] = thisnode[6]
+                    ebleng[i2] = thisnode[7]
+                    ecleng[i2] = thisnode[8]
+                    esleng[i2] = thisnode[14]
+                    edleng[i2] = thisnode[15]
+    
                 i2 += 1
             
         else:
         
             for nodeno in range(len(theselons)):
-                alon, alat, alocdep, alocstr, alocdip, anID, aaleng, ableng, acleng, aused_TO, aused_tmp, atrimmedAA, newnodes = loops.loop1(theselons, theselats, testarea, slab, depgrid, strgrid, dipgrid, slab1query, theseevents, seismo_thick, alen, blen, mdist, sdr, ddr, mindip, maxID, AA_data, TR_data, maxdist, maxthickness, minstk, tomo_sets, meanBA, slab1guide, grid, slab1data, dipthresh, datainfo, nodeinfo, nodeno)
+                alon, alat, alocdep, alocstr, alocdip, anID, aaleng, ableng, acleng, aused_TO, aused_tmp, atrimmedAA, newnodes, anydata, asleng, adleng = loops.loop1(theselons, theselats, testarea, slab, depgrid, strgrid, dipgrid, slab1query, theseevents, seismo_thick, alen, blen, mdist, sdr, ddr, mindip, maxID, AA_data, TR_data, maxdist, maxthickness, minstk, tomo_sets, meanBA, slab1guide, grid, slab1data, dipthresh, datainfo, nodeinfo, nodeno)
                 
-                if np.isfinite(alocdep):
+                if anydata:
                     
                     lons1[i2] = alon
                     lats1[i2] = alat
@@ -819,6 +842,8 @@ def main(args):
                     aleng[i2] = aaleng
                     bleng[i2] = ableng
                     cleng[i2] = acleng
+                    sleng[i2] = asleng
+                    dleng[i2] = adleng
                     
                     nused_TO = aused_TO
                     if len(nused_TO) > 0:
@@ -833,30 +858,56 @@ def main(args):
                         if AAadd['unc'].mean() > 5:
                             AAadd['etype'] = 'RF'
                         elistAA = pd.concat([elistAA, AAadd])
-                    if len(newnodes)>0:
-                        if allnewnodes is not None:
-                            allnewnodes = np.vstack((allnewnodes,newnodes))
-                        else:
-                            allnewnodes = newnodes
-            
-                elif len(newnodes)>0:
+                        
+                if len(newnodes)>0:
                     if allnewnodes is not None:
                         allnewnodes = np.vstack((allnewnodes,newnodes))
                     else:
                         allnewnodes = newnodes
-                
+            
+                if not anydata and np.isfinite(alocdep):
+                    elons1[i2] = alon
+                    elats1[i2] = alat
+                    edeps1[i2] = alocdep
+                    estrs1[i2] = alocstr
+                    edips1[i2] = alocdip
+                    enIDs1[i2] = anID
+                    ealeng[i2] = aaleng
+                    ebleng[i2] = ableng
+                    ecleng[i2] = acleng
+                    esleng[i2] = asleng
+                    edleng[i2] = adleng
+        
                 i2 += 1
-    
+                
     lons1 = lons1[lons1>-999]
     lats1 = lats1[lats1>-999]
-    deps1 = deps1[deps1>-999]
+    deps1 = deps1[(deps1>-999)|np.isnan(deps1)]
     strs1 = strs1[strs1>-999]
     dips1 = dips1[dips1>-999]
     nIDs1 = nIDs1[nIDs1>-999]
     aleng = aleng[aleng>-999]
     bleng = bleng[bleng>-999]
     cleng = cleng[cleng>-999]
+    sleng = sleng[sleng>-999]
+    dleng = dleng[dleng>-999]
     
+    elons1 = elons1[elons1>-999]
+    elats1 = elats1[elats1>-999]
+    edeps1 = edeps1[(edeps1>-999)|np.isnan(edeps1)]
+    estrs1 = estrs1[estrs1>-999]
+    edips1 = edips1[edips1>-999]
+    enIDs1 = enIDs1[enIDs1>-999]
+    ealeng = ealeng[ealeng>-999]
+    ebleng = ebleng[ebleng>-999]
+    ecleng = ecleng[ecleng>-999]
+    esleng = esleng[esleng>-999]
+    edleng = edleng[edleng>-999]
+    
+    print (len(lons1),len(lats1),len(deps1),len(strs1),len(dips1),len(nIDs1),len(aleng),len(bleng),len(cleng),len(sleng),len(dleng))
+    
+    testdf = pd.DataFrame({'lon':lons1,'lat':lats1,'depth':deps1,'strike':strs1,'dip':dips1,'id':nIDs1,'alen':aleng,'blen':bleng,'clen':cleng,'slen':sleng,'dlen':dleng})
+    testdf.to_csv('firstloop.csv',header=True,index=False,na_rep=np.nan)
 
     if allnewnodes is not None:
         theseIDs = []
@@ -889,6 +940,20 @@ def main(args):
         newalen = []
         newblen = []
         newclen = []
+        newslen = []
+        newdlen = []
+        
+        enewlats = []
+        enewlons = []
+        enewdeps = []
+        enewstrs = []
+        enewdips = []
+        enewnIDs = []
+        enewalen = []
+        enewblen = []
+        enewclen = []
+        enewslen = []
+        enewdlen = []
 
         if pooling:
             indices = range(len(theselons))
@@ -899,13 +964,13 @@ def main(args):
                                     AA_data, TR_data, maxdist, maxthickness, minstk,
                                     tomo_sets, meanBA,slab1guide,grid,slab1data,dipthresh,datainfo,nodeinfo)
 
-            pts = pool1.map(partial_loop1, indices) #$$#
+            pts = pool1.map(partial_loop1, indices)
             pool1.close()
             pool1.join()
             
             for i in range(len(indices)):
                 thisnode = pts[i]
-                if np.isfinite(thisnode[2]):
+                if thisnode[13]:
 
                     newlons.append(thisnode[0])
                     newlats.append(thisnode[1])
@@ -916,6 +981,8 @@ def main(args):
                     newalen.append(thisnode[6])
                     newblen.append(thisnode[7])
                     newclen.append(thisnode[8])
+                    newslen.append(thisnode[14])
+                    newdlen.append(thisnode[15])
 
                     nused_TO = thisnode[9]
                     if len(nused_TO) > 0:
@@ -930,13 +997,26 @@ def main(args):
                         if AAadd['unc'].mean() > 5:
                             AAadd['etype'] = 'RF'
                         elistAA = pd.concat([elistAA, AAadd])
-
+            
+                if not thisnode[13] and np.isfinite(thisnode[2]):
+                    enewlons.append(thisnode[0])
+                    enewlats.append(thisnode[1])
+                    enewdeps.append(thisnode[2])
+                    enewstrs.append(thisnode[3])
+                    enewdips.append(thisnode[4])
+                    enewnIDs.append(thisnode[5])
+                    enewalen.append(thisnode[6])
+                    enewblen.append(thisnode[7])
+                    enewclen.append(thisnode[8])
+                    enewslen.append(thisnode[14])
+                    enewdlen.append(thisnode[15])
+                    
         else:
             for nodeno in range(len(theselons)):
                 
-                alon, alat, alocdep, alocstr, alocdip, anID, aalen, ablen, aclen, aused_TO, aused_tmp, atrimmedAA, newnodes = loops.loop1(theselons, theselats, testarea, slab, depgrid, strgrid, dipgrid, slab1query, eventlist, seismo_thick, alen, blen, mdist, sdr, ddr, mindip, maxID, AA_data, TR_data, maxdist, maxthickness, minstk, tomo_sets, meanBA, slab1guide, grid, slab1data, dipthresh, datainfo, nodeinfo, nodeno)
+                alon, alat, alocdep, alocstr, alocdip, anID, aalen, ablen, aclen, aused_TO, aused_tmp, atrimmedAA, newnodes, anydata, aslen, adlen = loops.loop1(theselons, theselats, testarea, slab, depgrid, strgrid, dipgrid, slab1query, eventlist, seismo_thick, alen, blen, mdist, sdr, ddr, mindip, maxID, AA_data, TR_data, maxdist, maxthickness, minstk, tomo_sets, meanBA, slab1guide, grid, slab1data, dipthresh, datainfo, nodeinfo, nodeno)
                 
-                if np.isfinite(alocdep):
+                if anydata:
                     
                     newlons.append(alon)
                     newlats.append(alat)
@@ -947,6 +1027,8 @@ def main(args):
                     newalen.append(aalen)
                     newblen.append(ablen)
                     newclen.append(aclen)
+                    newslen.append(aslen)
+                    newdlen.append(adlen)
                     
                     nused_TO = aused_TO
                     if len(nused_TO) > 0:
@@ -962,6 +1044,19 @@ def main(args):
                             AAadd['etype'] = 'RF'
                         elistAA = pd.concat([elistAA, AAadd])
 
+                if not anydata and np.isfinite(alocdep):
+                    enewlons.append(alon)
+                    enewlats.append(alat)
+                    enewdeps.append(alocdep)
+                    enewstrs.append(alocstr)
+                    enewdips.append(alocdip)
+                    enewnIDs.append(anID)
+                    enewalen.append(aalen)
+                    enewblen.append(ablen)
+                    enewclen.append(aclen)
+                    enewslen.append(aslen)
+                    enewdlen.append(adlen)
+                    
         #np.savetxt('%s_diptest.csv'%slab, allnewnodes, header='lon,lat,depth,strike,dip',fmt='%.2f', delimiter=',',comments='')
 
         if printtest:
@@ -1010,7 +1105,26 @@ def main(args):
         aleng = np.append(aleng, [newalen])
         bleng = np.append(bleng, [newblen])
         cleng = np.append(cleng, [newclen])
+        sleng = np.append(sleng, [newslen])
+        dleng = np.append(dleng, [newdlen])
 
+        elons1 = np.append(elons1, [enewlons])
+        elats1 = np.append(elats1, [enewlats])
+        edeps1 = np.append(edeps1, [enewdeps])
+        estrs1 = np.append(estrs1, [enewstrs])
+        edips1 = np.append(edips1, [enewdips])
+        enIDs1 = np.append(enIDs1, [enewnIDs])
+        ealeng = np.append(ealeng, [enewalen])
+        ebleng = np.append(ebleng, [enewblen])
+        ecleng = np.append(ecleng, [enewclen])
+        esleng = np.append(esleng, [enewslen])
+        edleng = np.append(edleng, [enewdlen])
+        
+    emptynodes = pd.DataFrame({'lon':elons1,'lat':elats1,'ogdep':edeps1,'ogstr':estrs1,'ogdip':edips1,'nID':enIDs1,'alen':ealeng,'blen':ebleng,'clen':ecleng,'slen':esleng,'dlen':edleng})
+    
+    refdeps = pd.DataFrame({'lon':lons1, 'lat':lats1, 'ogdep':deps1})
+        
+        
     if global_average:
         ''' # need to fix this after adjusting based on BA depth at trench
         AA_global['depthtest'] = (AA_global['depth'].values*100).astype(int)
@@ -1214,6 +1328,9 @@ def main(args):
     surfnode = 0.5
     data0 = tmp_res[(tmp_res.stdv > -0.000001)&(tmp_res.stdv < 0.000001)]
     tmp_res = tmp_res[(tmp_res.stdv < -0.000001)|(tmp_res.stdv > 0.000001)]
+    
+    fillnodes = s2f.preshiftfill(tmp_res, emptynodes, refdeps, mindip, dipthresh)
+    fillnodes.to_csv('fillnodes.csv',header=True,index=False,na_rep=np.nan,float_format='%.2f')
 
     if use_box == 'yes':
         if lonmin<0:
@@ -1229,6 +1346,7 @@ def main(args):
     ages_error = gmt.GMTGrid.load(ageerrorsFile)
 
     shift_out, maxthickness = s2f.slabShift_noGMT(tmp_res, node, T, TR_data, seismo_thick, taper, ages, ages_error, filt, slab, maxthickness, grid, 'bzlon', 'bzlat', 'depth', fracS, npass, meanBA, printtest, kdeg, knot_no, rbfs, use_box)
+
     del ages
     del ages_error
 
@@ -1342,7 +1460,7 @@ def main(args):
     horzunc = shift_out['stdv'].values * (np.cos(np.radians(dip90s)))
     shift_out['vstdv'] = vertunc
     shift_out['hstdv'] = horzunc
-    
+
     if slab == 'sum' or slab == 'kur':
         shift_out, rempts = s2f.removeSZnodes(shift_out, fracS, 0.4, seismo_thick)
     elif slab == 'camz' or slab == 'sulz':
@@ -1358,7 +1476,6 @@ def main(args):
 
     shift_out = shift_out[['lon', 'lat', 'depth', 'stdv', 'smag', 'shiftstd', 'avstr', 'avdip', 'avrke', 'psdepth', 'sstr', 'sdip', 'nID', 'pslon', 'pslat', 'bzlon', 'bzlat', 'centsurf','thickness', 'alen', 'blen', 'clen', 'ogstr', 'ogdip','hstdv','vstdv']]
     shift_out.to_csv(nodeFile, header=True, index=False, na_rep=np.nan, float_format='%.2f')
-
 
     if slab == 'manz' or slab == 'solz' or slab == 'phiz':
         lowernodes, shift_out = s2f.nodesift(shift_out, grid)
@@ -1401,6 +1518,7 @@ def main(args):
     thickdata = np.zeros((len(shift_out),4))
     thickdata[:, 0], thickdata[:, 1], thickdata[:, 2], thickdata[:, 3] = shift_out['lon'].values, shift_out['lat'].values, shift_out['thickness'].values, np.ones(len(shift_out))
 
+
     if slab == 'sum':
         Surfgrid, xi, dl = s2f.chunksurface(surfdata, node, T, slab, grid, 'depth', time, 'test.txt', filt, pd.DataFrame(), npass, TR_data, meanBA, kdeg, knot_no, rbfs, shift_out,'fin','og','lon',100,110,105)
         flipornot = 'flip'
@@ -1410,6 +1528,7 @@ def main(args):
     else:
         Surfgrid, xi, dl = s2f.pySurface3(surfdata, node, T, slab, grid, 'depth', time, 'test.txt', filt, pd.DataFrame(), npass, TR_data, meanBA, kdeg, knot_no, rbfs, shift_out,'fin','og')
         flipornot = 'dontflip'
+
     
     #{‘reflect’, ‘constant’, ‘nearest’, ‘mirror’, ‘wrap’}
     sigma = (filt/2.0) / node

@@ -108,7 +108,7 @@ def loop1(lons, lats, testarea, slab, depgrid, strgrid, dipgrid,
         eventlist = eventlist[(eventlist.lon<lon+2.5)&(eventlist.lat<lat+2.5)&(eventlist.lon>lon-2.5)&(eventlist.lat>lat-2.5)]
     if len(eventlist)<2:
         #print ('no data here',lon,lat,nID)
-        return lon, lat, np.nan, np.nan, np.nan, nID, np.nan, np.nan, np.nan, [], [], [], []
+        return lon, lat, np.nan, np.nan, np.nan, nID, np.nan, np.nan, np.nan, [], [], [], [], False, 0, 0
 
     # If in troubleshooting range, print ID and set testprint = True
     if lon>testarea[0] and lon<testarea[1]:
@@ -174,9 +174,9 @@ def loop1(lons, lats, testarea, slab, depgrid, strgrid, dipgrid,
         clen = alen
         if len(eventlist)<2 and len(eventlist[(eventlist.etype == 'AS')|(eventlist.etype == 'RF')|(eventlist.etype == 'CP')])<1 and slab != 'ryu':
             #print ('no data here',lon,lat,nID)
-            return lon, lat, np.nan, np.nan, np.nan, nID, alen, blen, clen, [], [], [], []
+            return lon, lat, slab1, strtmp, diptmp, nID, alen, blen, clen, [], [], [], [], False, 0, 0
         elif slab == 'ryu' and len(eventlist)<2 and len(eventlist[(eventlist.etype == 'AS')|(eventlist.etype == 'RF')|(eventlist.etype == 'TO')|(eventlist.etype == 'CP')])<1:
-            return lon, lat, np.nan, np.nan, np.nan, nID, alen, blen, clen, [], [], [], []
+            return lon, lat, slab1, strtmp, diptmp, nID, alen, blen, clen, [], [], [], [], False, 0, 0
         else:
             newnodes = []
 
@@ -196,7 +196,7 @@ def loop1(lons, lats, testarea, slab, depgrid, strgrid, dipgrid,
         f.close()
     
     if alen == 1:
-    	return lon, lat, np.nan, np.nan, np.nan, nID, alen, blen, clen, [], [], [], []
+    	return lon, lat,slab1, strtmp, diptmp, nID, alen, blen, clen, [], [], [], [], False, 0, 0
     else:
     	farpoint = alen
     
@@ -225,10 +225,9 @@ def loop1(lons, lats, testarea, slab, depgrid, strgrid, dipgrid,
     if not test:
         if testprint:
             print ('not test',lon,lat,nID)
-        return lon, lat, np.nan, np.nan, np.nan, nID, alen, blen, clen, [], [], [], newnodes
+        return lon, lat, locdep, locstr, locdip, nID, alen, blen, clen, [], [], [], newnodes, False, sdepth, ddepth
 
     trimmedAA = trimmed[trimmed.etype == 'AA']
-    #print ('ddd',lon,lat,trimmedAA)
     trimmedBA = trimmed[trimmed.etype == 'BA']
     trimmedAS = trimmed[trimmed.etype == 'AS']
     trimmedRF = trimmed[trimmed.etype == 'RF']
@@ -247,12 +246,11 @@ def loop1(lons, lats, testarea, slab, depgrid, strgrid, dipgrid,
     else:
         if testprint:
             print ('trimmed too small',lon,lat,nID)
-        return lon, lat, np.nan, np.nan, np.nan, nID, alen, blen, clen, [], [], [], newnodes
+        return lon, lat, locdep, locstr, locdip, nID, alen, blen, clen, [], [], [], newnodes, False, sdepth, ddepth
 
     # We only need to do the rest of this loop if there is tomography data
     if tomo_sets == 0 or slab != 'samzzz' or slab =='ryu':
-        #print 'fff',lon,lat,trimmedAA
-        return lon, lat, locdep, locstr, locdip, nID, alen, blen, clen, [], used_tmp, trimmedAA, newnodes
+        return lon, lat, locdep, locstr, locdip, nID, alen, blen, clen, [], used_tmp, trimmedAA, newnodes, True, sdepth, ddepth
 
     '''nothing beyond this point in this loop gets used '''
     
@@ -385,7 +383,6 @@ def loop2(testarea, lons, lats, nIDs1, locdep, locstr, locdip, used_all, eventli
 
     eventtypes = list(set(trimmed.etype))
     if len(eventtypes) == 1 and eventtypes[0] == 'TO':
-        print (nID, lon, lat, peak_depth,'only tomography')
         onlyTO = 1
     else:
         onlyTO = 0

@@ -278,6 +278,7 @@ foreach(@sftrlon) {
 ## Data files:
 $data="$folderloc/$ID\_slab2_dat_$folder.csv";
 $nodes="$folderloc/$ID\_slab2_nod_$folder.csv";
+$filler="$folderloc/$ID\_slab2_fil_$folder.csv";
 $results="$folderloc/$ID\_slab2_res_$folder.csv";
 $tilted = "$folderloc/$ID\_slab2_sup_$folder.csv";
 $clipmask="$folderloc/$ID\_slab2_clp_$folder.csv";
@@ -447,6 +448,28 @@ open(DAT,"$nodes");
 close(OUTPOS);
 close(OUTPRE);
 
+# Extracting input nodes (pre and post shifted fillers) and writing to individual files for plotting
+$preshift2="$folderloc/$ID\_slab2_xsecs_$folder/preShift2.dat";
+open(OUTPRE2,">$preshift2");
+$posshift2="$folderloc/$ID\_slab2_xsecs_$folder/posShift2.dat";
+open(OUTPOS2,">$posshift2");
+
+open(DAT,"$filler");
+   @dta=<DAT>;close(DAT);
+   $n=0;
+   foreach(@dta) {
+        ($nlon[$n],$nlat[$n],$ndep[$n],$nstdv[$n],$nsmag[$n],$nshiftstd[$n],$navstr[$n],$navdip[$n],$navrke[$n],$npsdep[$n],$nsstr[$n],$nsdip[$n],$nnID[$n],$npslon[$n],$npslat[$n],$bzlon[$n],$bzlat[$n],$ncentsurf[$n],$nthickness[$n],$nalen[$n],$nblen[$n],$nclen[$n],$nogstr[$n],$nogdip[$n],$hstdv[$n],$vstdv[$n])=split(',',$_);
+        chomp($nogdip[$n]);
+        if($nlon[$n]<0){$nlon[$n]=$nlon[$n]+360;}
+        if($ndep[$n]!="nan"){
+        print OUTPOS2 "$nlon[$n] $nlat[$n] $ndep[$n] $nnID[$n]\n";
+        print OUTPRE2 "$bzlon[$n] $bzlat[$n] $npsdep[$n] $nnID[$n]\n";
+        }
+      $n++;
+   }
+close(OUTPOS2);
+close(OUTPRE2);
+
 
 
 ############################
@@ -535,6 +558,12 @@ foreach(@sftrlon) {
     # PLOT EXTENDED DEPTHS
     `$gmt project $tiltsurf -C$sftrlon[$n]/$sftrlat[$n] -A$sftraz[$n] $pWt $pL -Q -S -Fpz > $folderloc/$ID\_slab2_xsecs_$folder/indata/$ID\_$n\_tiltsurf.dat`;
     `$gmt psxy $folderloc/$ID\_slab2_xsecs_$folder/indata/$ID\_$n\_tiltsurf.dat $R3 $J3 -Sc0.1 -W0.05,red -O -K >> $folderloc/$ID\_slab2_xsecs_$folder/$ID\_$n\_csec.ps`;
+    
+    # PLOT fillers
+    `$gmt project $posshift2 -C$sftrlon[$n]/$sftrlat[$n] -A$sftraz[$n] $pWn $pL -Q -S -Fpz > $folderloc/$ID\_slab2_xsecs_$folder/indata/$ID\_$n\_posshift2.dat`;
+    `$gmt psxy $folderloc/$ID\_slab2_xsecs_$folder/indata/$ID\_$n\_posshift2.dat $R3 $J3 -Sc0.6 -Gturquoise -W0.05,black -O -K >> $folderloc/$ID\_slab2_xsecs_$folder/$ID\_$n\_csec.ps`;
+    `$gmt project $preshift2 -C$sftrlon[$n]/$sftrlat[$n] -A$sftraz[$n] $pWn $pL -Q -S -Fpz > $folderloc/$ID\_slab2_xsecs_$folder/indata/$ID\_$n\_preshift2.dat`;
+    `$gmt psxy $folderloc/$ID\_slab2_xsecs_$folder/indata/$ID\_$n\_preshift2.dat $R3 $J3 -Sc0.3 -Gmagenta -W0.05,black -O -K >> $folderloc/$ID\_slab2_xsecs_$folder/$ID\_$n\_csec.ps`;
     
     # PLOT NODES
     `$gmt project $posshift -C$sftrlon[$n]/$sftrlat[$n] -A$sftraz[$n] $pWn $pL -Q -S -Fpz > $folderloc/$ID\_slab2_xsecs_$folder/indata/$ID\_$n\_posshift.dat`;
