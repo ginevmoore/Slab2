@@ -6443,7 +6443,7 @@ def getSZthickness(data,folder,slab,maxdep,maxdepdiff,origorcentl,origorcentd,sl
     alldata = alldata[alldata.mdep<=maxdep]
 
     # filter dataset by kagans angle, if not enough data points exist, broaden kagans angle filter
-#    maxadd = 120-35
+    # maxadd = 120-35
     maxadd = 60-35
     for i in range(maxadd):
         dat = alldata[alldata.kagan < 35+i]
@@ -6454,7 +6454,7 @@ def getSZthickness(data,folder,slab,maxdep,maxdepdiff,origorcentl,origorcentd,sl
         alldata = alldata[alldata.kagan < maxkagan]
     except:
         print ('not enough events within surface filter')
-#        maxkagan = 100
+        # maxkagan = 100
         maxkagan = 60
         alldata = alldata[alldata.kagan < maxkagan]
 
@@ -6473,6 +6473,10 @@ def getSZthickness(data,folder,slab,maxdep,maxdepdiff,origorcentl,origorcentd,sl
 
     N = len(depths)
     depths.shape = (N,1)
+
+    if N < 2:
+        print ('seismogenic zone thickness was not calculated, not enough data')
+        return np.nan, np.nan
 
     # initialize empty list for smooth depths and array of 0s for histogram rep.
     dc = [0 for i in range(maxdep)]

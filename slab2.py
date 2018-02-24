@@ -1747,11 +1747,12 @@ def main(args):
     
         os.system("rm Output/%s/%s_slab2_con_%s.txt"%(folder,slab,date))
         contourlist = np.arange(100,700,20)
+        depthlist = np.array(list((set(supplement.depth))))
         with open('Output/%s/%s_slab2_con_%s.txt'%(folder,slab,date),'a') as f:
             for c in contourlist:
-                dat = supplement[(supplement.depth < c+0.03)&(supplement.depth > c-0.03)]
-                if len(dat) < 1:
-                    dat = supplement[(supplement.depth < c+1)&(supplement.depth > c-1)]
+                distdepths = np.abs(c-depthlist)
+                supdep = depthlist[np.argmin(distdepths)]
+                dat = supplement[supplement.depth == supdep]
                 if len(dat) > 0:
                     if slab == 'izu' or slab == 'man' or slab == 'ker':
                         dat = dat.sort_values(by=['lat'], ascending=False)
@@ -1760,6 +1761,7 @@ def main(args):
                     f.write('> %i \n'%c)
                     dat = dat[['lon','lat']]
                     dat.to_csv(f,header=False,index=False,sep=' ')
+
         f.close()
         
 

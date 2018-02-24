@@ -45,7 +45,7 @@ def main(args):
 
     
     # list folder names of all slab models to calculate szt from, and move to new folder structure
-    filelist = ['kur_slab2_01.03.18','alu_slab2_01.04.18','hel_slab2_01.04.18','hin_slab2_01.04.18','ryu_slab2_01.04.18','ker_slab2_01.08.18','sam_slab2_01.03.18','sum_slab2_01.05.18','man_slab2_01.08.18','sol_slab2_01.08.18','izu_slab2_01.08.18','pam_slab2_01.04.18','him_slab2_01.04.18','cal_slab2_01.04.18','mak_slab2_01.04.18','sco_slab2_01.04.18','car_slab2_01.04.18','mue_slab2_01.04.18','cas_slab2_01.04.18','cam_slab2_01.03.18','puy_slab2_01.04.18','van_slab2_01.04.18','png_slab2_01.04.18','cot_slab2_01.04.18','phi_slab2_01.04.18','sul_slab2_01.04.18','hal_slab2_01.04.18']
+    filelist = ['izu_slab2_02.23.18','man_slab2_02.23.18','izu_slab2_01.08.18','sam_slab2_02.22.18','cas_slab2_02.22.18','cam_slab2_02.22.18','sul_slab2_02.22.18','phi_slab2_02.22.18','hin_slab2_02.22.18','sul_slab2_01.04.18','cam_slab2_01.03.18','cot_slab2_02.22.18','alu_slab2_02.22.18','man_slab2_02.22.18','sam_slab2_02.19.18','sam_slab2_02.20.18','sam_slab2_01.03.18','sam_slab2_02.18.18','sul_slab2_02.18.18','sam_slab2_02.17.18','phi_slab2_01.04.18','mue_slab2_01.04.18','mak_slab2_01.04.18','alu_slab2_01.04.18','alu_slab2_01.29.18','man_slab2_01.08.18','sol_slab2_01.08.18','puy_slab2_01.04.18','ryu_slab2_01.04.18','kur_slab2_01.03.18','van_slab2_01.04.18','cot_slab2_01.04.18','png_slab2_01.04.18','sco_slab2_01.04.18','cas_slab2_01.04.18','ker_slab2_01.08.18','sum_slab2_01.05.18','pam_slab2_01.04.18','hal_slab2_01.04.18','hin_slab2_01.04.18','him_slab2_01.04.18','hel_slab2_01.04.18','cal_slab2_01.04.18','car_slab2_01.04.18']
 
     # create new directory system for slab output
     os.system('rm -r %s'%slabsbyfile)
