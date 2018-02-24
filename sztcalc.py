@@ -45,7 +45,7 @@ def main(args):
 
     
     # list folder names of all slab models to calculate szt from, and move to new folder structure
-    filelist = ['izu_slab2_02.23.18','man_slab2_02.23.18','izu_slab2_01.08.18','sam_slab2_02.22.18','cas_slab2_02.22.18','cam_slab2_02.22.18','sul_slab2_02.22.18','phi_slab2_02.22.18','hin_slab2_02.22.18','sul_slab2_01.04.18','cam_slab2_01.03.18','cot_slab2_02.22.18','alu_slab2_02.22.18','man_slab2_02.22.18','sam_slab2_02.19.18','sam_slab2_02.20.18','sam_slab2_01.03.18','sam_slab2_02.18.18','sul_slab2_02.18.18','sam_slab2_02.17.18','phi_slab2_01.04.18','mue_slab2_01.04.18','mak_slab2_01.04.18','alu_slab2_01.04.18','alu_slab2_01.29.18','man_slab2_01.08.18','sol_slab2_01.08.18','puy_slab2_01.04.18','ryu_slab2_01.04.18','kur_slab2_01.03.18','van_slab2_01.04.18','cot_slab2_01.04.18','png_slab2_01.04.18','sco_slab2_01.04.18','cas_slab2_01.04.18','ker_slab2_01.08.18','sum_slab2_01.05.18','pam_slab2_01.04.18','hal_slab2_01.04.18','hin_slab2_01.04.18','him_slab2_01.04.18','hel_slab2_01.04.18','cal_slab2_01.04.18','car_slab2_01.04.18']
+    filelist = ['sam_slab2_02.22.18','cam_slab2_02.22.18','sul_slab2_02.22.18','phi_slab2_01.04.18','mue_slab2_01.04.18','mak_slab2_01.04.18','alu_slab2_01.04.18','alu_slab2_01.29.18','man_slab2_01.08.18','sol_slab2_01.08.18','puy_slab2_01.04.18','ryu_slab2_01.04.18','kur_slab2_01.03.18','van_slab2_01.04.18','cot_slab2_01.04.18','png_slab2_01.04.18','sco_slab2_01.04.18','cas_slab2_01.04.18','ker_slab2_01.08.18','sum_slab2_01.05.18','pam_slab2_01.04.18','hal_slab2_01.04.18','hin_slab2_01.04.18','him_slab2_01.04.18','hel_slab2_01.04.18','cal_slab2_01.04.18','car_slab2_01.04.18']
 
     # create new directory system for slab output
     os.system('rm -r %s'%slabsbyfile)
@@ -79,6 +79,7 @@ def main(args):
 
         (slab,s2k,date) = folder.split('_')
         
+        print ('                ---   %s   ---'%folder)
         inFile = '%s/%s_%s_input.csv'%(inputfolder,slab,inputdate)
         fname = '%s/%s/%s_slab2_dep_%s.grd'%(slabsbyslab,folder,slab,date)
         
@@ -116,7 +117,7 @@ def main(args):
 
             savedir = '%s/szt'%slabsbyfile
             seismo_thick, taper_start, deplist, normpdfD, lendata = s2f.getSZthickness(eventlist,folder,slab,maxdep,maxdepdiff,origorcentl,origorcentd,slaborev,savedir,minlength)
-            print ('slab, seismo_thick:',slab, seismo_thick, lendata)
+            print ('slab, seismo_thick, ndata:',slab, seismo_thick, lendata)
         
             if lendata > 0:
                 ax1z.plot(deplist, normpdfD,label='%s, s:%.1f, d:%.1f'%(slab,taper_start,seismo_thick),linewidth=2,c=clist[n])
@@ -145,12 +146,6 @@ def main(args):
         os.system('cp %s_par_%s.csv %s/parameters'%(thisfolder,date,slabsbyfile))
         os.system('cp %s_figs_%s/* %s/maps'%(thisfolder,date,slabsbyfile))
         os.system('cp %s_xsecs_%s/* %s/crossections'%(thisfolder,date,slabsbyfile))
-        os.system('rm %s/maps/dep2.cpt'%slabsbyfile)
-        os.system('rm %s/maps/tiltedd.dat'%slabsbyfile)
-        os.system('rm %s/maps/tiltedp.dat'%slabsbyfile)
-        os.system('rm %s/maps/tilteds.dat'%slabsbyfile)
-        os.system('rm %s/maps/tiltedt.dat'%slabsbyfile)
-        os.system('rm %s/maps/tiltedu.dat'%slabsbyfile)
 
     ax1z.set_xlim([0,65])
     ax1z.legend(loc='best')

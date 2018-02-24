@@ -661,6 +661,10 @@ unlink "$folderloc/$ID\_slab2_xsecs_$folder/preShift.dat";
 unlink "$folderloc/$ID\_slab2_xsecs_$folder/rezultz1.dat";
 unlink "$folderloc/$ID\_slab2_xsecs_$folder/rezultz2.dat";
 unlink "$folderloc/$ID\_slab2_xsecs_$folder/tilted.dat";
+unlink "$folderloc/$ID\_slab2_xsecs_$folder/temp.dat";
+unlink "$folderloc/$ID\_slab2_xsecs_$folder/posShift2.dat";
+unlink "$folderloc/$ID\_slab2_xsecs_$folder/preShift2.dat";
+unlink "$folderloc/$ID\_slab2_xsecs_$folder/dep.cpt";
 
 #####################
 sub round_to_nths {

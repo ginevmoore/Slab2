@@ -413,6 +413,7 @@ unlink "$folderloc/$ID\_slab2_figs_$folder/tempUNFL.out";
 unlink "$folderloc/$ID\_slab2_dat2_$folder.csv";
 unlink "$folderloc/$ID\_slab2_dat2_$folder.csv";
 unlink "$folderloc/$ID\_slab2_figs_$folder/dep.cpt";
+unlink "$folderloc/$ID\_slab2_figs_$folder/dep2.cpt";
 unlink "$folderloc/$ID\_slab2_figs_$folder/dip.cpt";
 unlink "$folderloc/$ID\_slab2_figs_$folder/str.cpt";
 unlink "$folderloc/$ID\_slab2_figs_$folder/unc.cpt";
@@ -425,6 +426,11 @@ unlink "$folderloc/$ID\_slab2_figs_$folder/indataEQu.dat";
 unlink "$folderloc/$ID\_slab2_figs_$folder/indataERu.dat";
 unlink "$folderloc/$ID\_slab2_figs_$folder/indataRFu.dat";
 unlink "$folderloc/$ID\_slab2_figs_$folder/indataTOu.dat";
+unlink "$folderloc/$ID\_slab2_figs_$folder/titledd.dat";
+unlink "$folderloc/$ID\_slab2_figs_$folder/titledp.dat";
+unlink "$folderloc/$ID\_slab2_figs_$folder/titleds.dat";
+unlink "$folderloc/$ID\_slab2_figs_$folder/titledt.dat";
+unlink "$folderloc/$ID\_slab2_figs_$folder/titledu.dat";
 
 #####################
 #####################
