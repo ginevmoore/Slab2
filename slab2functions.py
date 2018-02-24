@@ -6529,21 +6529,21 @@ def getSZthickness(data,folder,slab,maxdep,maxdepdiff,origorcentl,origorcentd,sl
     norm_pdf = matplotlib.mlab.normpdf(depthlist,m0,sd0)
 
     # find bimodal distribution using 3 Gaussians
-    clf3 = mixture.GaussianMixture(n_components=3, covariance_type='full')
+    clf3 = mixture.GMM(n_components=3, covariance_type='full')
     clf3.fit(depths2)
 
     # find bimodal distribution using 2 Gaussians
-    clf2 = mixture.GaussianMixture(n_components=2, covariance_type='full')
+    clf2 = mixture.GMM(n_components=2, covariance_type='full')
     clf2.fit(depths2)
 
     # acquire weights, means, and covariances from contributing distributions
     m1, m2, m3 = clf3.means_
     w1, w2, w3 = clf3.weights_
-    c1, c2, c3 = clf3.covariances_
+    c1, c2, c3 = clf3.covars_
 
     md1, md2 = clf2.means_
     wd1, wd2= clf2.weights_
-    cd1, cd2 = clf2.covariances_
+    cd1, cd2 = clf2.covars_
 
     # calculate standard deviations for triple and double distributions
     sd1=np.sqrt(c1)[0]
@@ -6825,20 +6825,20 @@ def getSZthickness1(data,folder,slab):
     norm_pdf = matplotlib.mlab.normpdf(depthlist,m0,sd0)
 
     # find bimodal distribution using 3 Gaussians
-    clf3 = mixture.GaussianMixture(n_components=3, covariance_type='full')
+    clf3 = mixture.GMM(n_components=3, covariance_type='full')
     clf3.fit(depths2)
 
-    clf2 = mixture.GaussianMixture(n_components=2, covariance_type='full')
+    clf2 = mixture.GMM(n_components=2, covariance_type='full')
     clf2.fit(depths2)
     # acquire weights, means, and covariances from contributing distributions
 
     m1, m2, m3 = clf3.means_
     w1, w2, w3 = clf3.weights_
-    c1, c2, c3 = clf3.covariances_
+    c1, c2, c3 = clf3.covars_
 
     md1, md2 = clf2.means_
     wd1, wd2= clf2.weights_
-    cd1, cd2 = clf2.covarinaces_
+    cd1, cd2 = clf2.covars_
 
     # calculate standard deviations
     sd1=np.sqrt(c1)[0]
