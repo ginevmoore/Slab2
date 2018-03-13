@@ -1047,8 +1047,6 @@ def slabplotter(args):
         raise Exception,'No information was written to the file, check bounds to ensure that \
         they encompass subduction zone information within the bounds of the input file(s)'
 
-    plt.show()
-
 
 ##############################################################################################
 #Everything below this point serves the purpose of identifying and

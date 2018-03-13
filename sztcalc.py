@@ -45,7 +45,7 @@ def main(args):
 
     
     # list folder names of all slab models to calculate szt from, and move to new folder structure
-    filelist = ['sam_slab2_02.22.18','cam_slab2_02.22.18','sul_slab2_02.22.18','phi_slab2_01.04.18','mue_slab2_01.04.18','mak_slab2_01.04.18','alu_slab2_01.04.18','alu_slab2_01.29.18','man_slab2_01.08.18','sol_slab2_01.08.18','puy_slab2_01.04.18','ryu_slab2_01.04.18','kur_slab2_01.03.18','van_slab2_01.04.18','cot_slab2_01.04.18','png_slab2_01.04.18','sco_slab2_01.04.18','cas_slab2_01.04.18','ker_slab2_01.08.18','sum_slab2_01.05.18','pam_slab2_01.04.18','hal_slab2_01.04.18','hin_slab2_01.04.18','him_slab2_01.04.18','hel_slab2_01.04.18','cal_slab2_01.04.18','car_slab2_01.04.18']
+    filelist = ['mue_slab2_01.04.18','mak_slab2_01.04.18','man_slab2_01.08.18','sol_slab2_01.08.18','puy_slab2_01.04.18','van_slab2_01.04.18','cot_slab2_01.04.18','png_slab2_01.04.18','sco_slab2_01.04.18','cas_slab2_01.04.18','pam_slab2_01.04.18','hal_slab2_01.04.18','hin_slab2_01.04.18','him_slab2_01.04.18','hel_slab2_01.04.18','cal_slab2_01.04.18','car_slab2_01.04.18']
 
     # create new directory system for slab output
     os.system('rm -r %s'%slabsbyfile)
@@ -125,11 +125,11 @@ def main(args):
                 ax1z.plot([taper_start,taper_start],[0.09,0.1],linewidth=2,linestyle='dotted',c=clist[n]),
                 n+=1
     
-            slabdf.append(slab)
-            shaldf.append(taper_start)
-            deepdf.append(seismo_thick)
-            peakdf.append(deplist[np.argmax(normpdfD)])
-            nevsdf.append(lendata)
+                slabdf.append(slab)
+                shaldf.append(taper_start)
+                deepdf.append(seismo_thick)
+                peakdf.append(deplist[np.argmax(normpdfD)])
+                nevsdf.append(lendata)
     
         os.system('cp %s %s/inputdata'%(inFile,slabsbyfile))
         os.system('cp %s_dep_%s.grd %s/grids'%(thisfolder,date,slabsbyfile))
